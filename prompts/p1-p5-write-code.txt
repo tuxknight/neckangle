@@ -1,0 +1,640 @@
+Write ALL Kotlin source files for the NeckAngle Android app at /home/pi/hermes-workspace/NeckAngle.
+
+Root package: com.neckangle.app
+Source root: /home/pi/hermes-workspace/NeckAngle/app/src/main/java/com/neckangle/app/
+
+Write EVERY file below COMPLETELY. No stubs, no TODOs. Every file must compile.
+
+## FILE 1: NeckAngleApp.kt
+Path: app/src/main/java/com/neckangle/app/NeckAngleApp.kt
+```kotlin
+package com.neckangle.app
+
+import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import com.neckangle.app.data.db.AppDatabase
+
+class NeckAngleApp : Application() {
+
+    lateinit var database: AppDatabase
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        database = AppDatabase.getInstance(this)
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "颈椎监测",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "后台颈椎姿态监测通知"
+                setShowBadge(false)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    companion object {
+        const val CHANNEL_ID = "neck_monitor"
+        lateinit var instance: NeckAngleApp
+            private set
+    }
+}
+```
+
+## FILE 2: MainActivity.kt
+Path: app/src/main/java/com/neckangle/app/MainActivity.kt
+- Single activity, sets content to NeckAngleTheme wrapping the NavGraph composable
+- Handle camera + POST_NOTIFICATIONS permissions using rememberLauncherForActivityResult
+- On first launch, request permissions. If denied, show rationale dialog.
+- Lock to portrait orientation
+- Import and use NeckAngleTheme from ui/theme/Theme
+
+## FILE 3: ui/theme/Color.kt
+```kotlin
+package com.neckangle.app.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val BackgroundDark = Color(0xFF0F0F1A)
+val SurfaceDark = Color(0xFF1A1A2E)
+val SurfaceCard = Color(0xFF1E1E32)
+val Primary = Color(0xFF00D4FF)
+val Secondary = Color(0xFF7B2FF7)
+val StatusGreen = Color(0xFF00E676)
+val StatusYellow = Color(0xFFFFD600)
+val StatusRed = Color(0xFFFF1744)
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFB0B0C0)
+val SurfaceBorder = Color(0xFF2A2A40)
+```
+
+## FILE 4: ui/theme/Type.kt
+```kotlin
+package com.neckangle.app.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+val NeckAngleTypography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Bold,
+        fontSize = 80.sp,
+        letterSpacing = (-2).sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Bold,
+        fontSize = 48.sp
+    ),
+    headlineMedium = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp
+    ),
+    titleMedium = TextStyle(
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp
+    ),
+    bodyLarge = TextStyle(
+        fontSize = 16.sp
+    ),
+    bodyMedium = TextStyle(
+        fontSize = 14.sp,
+        color = TextSecondary
+    ),
+    labelLarge = TextStyle(
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp
+    ),
+    labelSmall = TextStyle(
+        fontSize = 12.sp,
+        color = TextSecondary
+    )
+)
+```
+
+## FILE 5: ui/theme/Theme.kt
+```kotlin
+package com.neckangle.app.ui.theme
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+
+private val DarkColorScheme = darkColorScheme(
+    primary = Primary,
+    secondary = Secondary,
+    background = BackgroundDark,
+    surface = SurfaceDark,
+    surfaceVariant = SurfaceCard,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onBackground = TextPrimary,
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextSecondary,
+    outline = SurfaceBorder
+)
+
+@Composable
+fun NeckAngleTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = DarkColorScheme,
+        typography = NeckAngleTypography,
+        content = content
+    )
+}
+```
+
+## FILE 6: ui/components/AngleGauge.kt
+- Composable that draws an arc gauge using Canvas
+- Arc from 135° to 405° (270° sweep, bottom-center gap)
+- 3 colored sectors: 0-15° green, 15-30° yellow, 30-60° red
+- Needle drawn as a thin line with small circle at pivot
+- Parameters: currentAngle: Float, maxAngle: Float = 60f, modifier: Modifier = Modifier.size(200.dp)
+- Use drawArc, drawLine, drawCircle
+
+## FILE 7: ui/components/AngleDisplay.kt
+- Shows angle number in Monospace large font
+- Color based on value: green < 15°, yellow < 30°, red >= 30° (or null/deactivated -> gray)
+- animateFloatAsState for smooth transitions
+- Parameters: angle: Float?, modifier: Modifier
+- When angle is null: show "--°" in gray
+
+## FILE 8: ui/components/StatusCard.kt
+- Simple card with rounded 24dp corners, surfaceVariant background
+- Row with Icon + Column(label, value)
+- Parameters: icon: ImageVector, label: String, value: String, modifier: Modifier
+
+## FILE 9: ui/components/PostureIndicator.kt
+- Shows posture mode + bad posture duration
+- Row with icon + text
+- Parameters: postureMode: String, badPostureDuration: Int, isBadPosture: Boolean
+- Chinese labels: "站立" "坐姿" "平躺" "侧卧" "未知"
+- Duration: "已低头 XX 秒" when isBadPosture, "姿势良好" when not
+
+## FILE 10: ui/monitor/MonitorScreen.kt
+- Takes MonitorViewModel
+- Column layout:
+  1. Camera preview as small overlay (AndroidView wrapping PreviewView, 120dp circular clip, align top-end with offset)
+  2. Spacer(weight)
+  3. AngleDisplay centered
+  4. AngleGauge centered
+  5. PostureIndicator centered
+  6. Spacer
+  7. Large circular button (120dp) with play/pause icon to toggle monitoring
+  8. Spacer(weight)
+- When face not detected > 3s: show "--°" and "请将面部对准摄像头" hint
+- Use animateFloatAsState for angle transitions
+
+## FILE 11: ui/monitor/MonitorViewModel.kt
+```kotlin
+package com.neckangle.app.ui.monitor
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.neckangle.app.engine.angle.MonitorEngine
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class MonitorViewModel : ViewModel() {
+    private val engine = MonitorEngine.instance
+
+    val angle: StateFlow<Float?> = engine.monitorState
+        .map { it.angle }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val postureMode: StateFlow<String> = engine.monitorState
+        .map { it.postureModeDisplay }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "未知")
+
+    val isMonitoring: StateFlow<Boolean> = engine.monitorState
+        .map { it.isMonitoring }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val badPostureDuration: StateFlow<Int> = engine.monitorState
+        .map { it.badPostureDuration }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val isFaceDetected: StateFlow<Boolean> = engine.monitorState
+        .map { it.isFaceDetected }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val isBadPosture: StateFlow<Boolean> = engine.monitorState
+        .map { it.isBadPosture }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun toggleMonitoring() {
+        viewModelScope.launch {
+            if (engine.isRunning) engine.stop() else engine.start()
+        }
+    }
+}
+```
+
+## FILE 12: ui/settings/SettingsScreen.kt
+- Takes SettingsViewModel
+- LazyColumn with grouped sections:
+  1. 提醒设置 header
+     - 角度阈值: Slider 10-45°, step 1, show current value, default 25
+     - 持续时长: Slider 5-120, step 5, default 15
+     - 冷却时间: Slider 10-120, step 5, default 30
+     - 震动模式: SingleChoiceSegmentedButtonRow with 4 options (单次/两次短震/长震/脉冲)
+  2. 性能 header
+     - 采集频率: SingleChoiceSegmentedButtonRow with 3 options (省电/均衡/精准)
+  3. 数据 header
+     - 清除今天数据 (button, shows AlertDialog confirmation)
+     - 清除所有数据 (button, shows AlertDialog confirmation)
+  4. 关于 header
+     - 版本号: "v1.0"
+     - 隐私说明: "本应用所有数据均在本地处理，不会上传或保存您的面部图像"
+- Each section as a Card with padding
+- Use Material3 Slider, SegmentedButton, AlertDialog
+
+## FILE 13: ui/settings/SettingsViewModel.kt
+```kotlin
+package com.neckangle.app.ui.settings
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.neckangle.app.NeckAngleApp
+import com.neckangle.app.data.repository.SettingsRepository
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val repo = SettingsRepository(NeckAngleApp.instance.database)
+
+    val angleThreshold = repo.angleThreshold
+    val durationThreshold = repo.durationThreshold
+    val cooldownSeconds = repo.cooldownSeconds
+    val vibrationPattern = repo.vibrationPattern
+    val frameRateMode = repo.frameRateMode
+
+    fun updateAngleThreshold(value: Float) = viewModelScope.launch { repo.updateAngleThreshold(value) }
+    fun updateDurationThreshold(value: Int) = viewModelScope.launch { repo.updateDurationThreshold(value) }
+    fun updateCooldown(value: Int) = viewModelScope.launch { repo.updateCooldown(value) }
+    fun updateVibrationPattern(value: String) = viewModelScope.launch { repo.updateVibrationPattern(value) }
+    fun updateFrameRateMode(value: String) = viewModelScope.launch { repo.updateFrameRateMode(value) }
+    fun clearToday() = viewModelScope.launch { repo.clearToday() }
+    fun clearAll() = viewModelScope.launch { repo.clearAll() }
+}
+```
+
+## FILE 14: ui/stats/StatsScreen.kt
+- Takes StatsViewModel
+- Date navigation: Row with prev button, "今天" text, next button
+- Three StatCards in a Row (or wrap in horizontal scroll if narrow): 总低头时长 / 平均角度 / 最长连续
+- 7日趋势: Canvas line chart
+  - x-axis: day labels (Mon-Sun or date)
+  - y-axis: average angle
+  - Draw axes, grid lines, data points, connecting line
+- Empty state when no data: "开始监测后，这里将展示你的颈椎姿势数据"
+
+## FILE 15: ui/stats/StatsViewModel.kt
+```kotlin
+package com.neckangle.app.ui.stats
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.neckangle.app.NeckAngleApp
+import com.neckangle.app.data.repository.StatsRepository
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+data class StatsUiState(
+    val totalBadMinutes: Int = 0,
+    val avgAngle: Float = 0f,
+    val maxConsecutiveSeconds: Int = 0,
+    val dailyTrend: List<DayStat> = emptyList(),
+    val hasData: Boolean = false,
+    val selectedDate: String = "今天"
+)
+
+data class DayStat(
+    val dayLabel: String,
+    val avgAngle: Float,
+    val totalMinutes: Int
+)
+
+class StatsViewModel(application: Application) : AndroidViewModel(application) {
+    private val repo = StatsRepository(NeckAngleApp.instance.database)
+    private val _uiState = MutableStateFlow(StatsUiState())
+    val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
+
+    init {
+        loadTodayStats()
+    }
+
+    private fun loadTodayStats() {
+        viewModelScope.launch {
+            repo.getTodayStats().collect { stats ->
+                _uiState.update { it.copy(
+                    totalBadMinutes = stats.first,
+                    avgAngle = stats.second,
+                    hasData = stats.first > 0
+                )}
+            }
+        }
+        viewModelScope.launch {
+            repo.getWeeklyTrend().collect { trend ->
+                _uiState.update { it.copy(dailyTrend = trend) }
+            }
+        }
+    }
+}
+```
+
+## FILE 16: ui/navigation/NavGraph.kt
+- NeckAngleNavGraph composable
+- Scaffold with BottomNavigationBar (3 tabs: 监测/统计/设置 with icons)
+- Center FAB for start/stop (green/red, icon play/stop)
+- NavHost with 3 routes: "monitor", "stats", "settings"
+- Create NavController
+- FAB state (isMonitoring) accessed via shared MonitorEngine.instance
+
+## FILE 17: engine/camera/CameraSource.kt
+- CameraSource class
+- Uses ProcessCameraProvider
+- Creates Preview use case + ImageAnalysis use case
+- ImageAnalysis analyzer: converts ImageProxy to ByteArray, creates Frame object, emits to frameFlow
+- Frame data class: data: ByteArray, rotation: Int, timestamp: Long
+- frameFlow: MutableSharedFlow<Frame>(extraBufferCapacity = 1)
+- Configurable analyzer target resolution (640x480)
+- Frame rate throttle: skip frames when frameRateMode is "power_save" or "balanced"
+- start(lifecycleOwner), stop(), setFrameRateMode(mode)
+- The PreviewView is available via getPreviewView(): PreviewView
+- Use @androidx.camera.core.ExperimentalGetImage annotation if needed
+
+## FILE 18: engine/facedetect/FaceDetector.kt
+- FaceDetector class
+- Uses MediaPipe FaceLandmarker
+- Create from bundled model file. Try loading from app's filesDir/models/face_landmarker.task first
+- If model not found, try copying from assets
+- If still not found, log warning and isAvailable = false
+- suspend fun detect(frame: Frame): FaceResult?
+- FaceResult: noseTip: Pair<Float,Float>, leftEye: Pair<Float,Float>?, rightEye: Pair<Float,Float>?, mouthLeft: Pair<Float,Float>?, mouthRight: Pair<Float,Float>?
+- All coordinates normalized 0.0-1.0
+- Use withContext(Dispatchers.Default) for inference
+
+## FILE 19: engine/angle/AngleCalculator.kt
+- AngleCalculator class
+- fun calculate(frame: Frame, faceResult: FaceResult): AngleResult
+- Algorithm:
+  - If eyes visible: compute face vertical center, compare nose vertical position
+  - If profile (only one side): compute nose-to-ear offset as proxy for head turn
+  - Map to approximate forward-head angle (0-60 degrees based on landmark positions)
+- Combined with phone pitch from rotation vector sensor
+- AngleResult: angleDeg: Float, confidence: Float
+- When few landmarks visible: low confidence (~0.3)
+- When all landmarks visible: high confidence (~0.9)
+
+## FILE 20: engine/angle/PostureClassifier.kt
+- PostureClassifier class
+- Uses SensorManager to get accelerometer readings
+- fun start(): register sensor listener
+- fun stop(): unregister
+- postureMode: MutableStateFlow<PostureMode>(UNKNOWN)
+- PostureMode enum: STANDING, SITTING, LYING_SUPINE, LYING_SIDE, UNKNOWN
+- Smoothing: running average over last 10 readings (2 seconds at 5Hz)
+- Classification logic:
+  - |z| > 8 && |x| < 3 && |y| < 3 -> STANDING or SITTING (can't distinguish based on gravity alone)
+  - |y| > 8 && |z| < 3 -> LYING_SUPINE
+  - |x| > 8 && |y| < 3 && |z| < 3 -> LYING_SIDE
+  - else -> UNKNOWN
+
+## FILE 21: engine/angle/MonitorEngine.kt
+- MonitorEngine class (singleton via companion object instance)
+- Properties: cameraSource, faceDetector, angleCalculator, postureClassifier
+- monitorState: MutableStateFlow(MonitorState())
+- MonitorState data class:
+  - angle: Float? = null
+  - postureMode: PostureMode = PostureMode.UNKNOWN
+  - isFaceDetected: Boolean = false
+  - badPostureDuration: Int = 0
+  - isBadPosture: Boolean = false
+  - isMonitoring: Boolean = false
+  - postureModeDisplay: String get() = when(postureMode) {
+      PostureMode.STANDING, PostureMode.SITTING -> "站立"
+      PostureMode.LYING_SUPINE -> "平躺"
+      PostureMode.LYING_SIDE -> "侧卧"
+      PostureMode.UNKNOWN -> "未知"
+    }
+- var isRunning: Boolean = false
+- suspend fun start(): initialize camera, start sensors, launch monitoring coroutine
+- fun stop(): stop all
+- Monitoring loop: collect CameraSource.frameFlow, detect face, calculate angle, update state
+- If face not detected for 3 seconds: set angle to null
+- Track badPostureDuration: increment while angle > threshold (configurable)
+
+## FILE 22: engine/alert/AlertEngine.kt
+- AlertEngine class
+- Subscribes to MonitorEngine.monitorState
+- fun start() / fun stop()
+- Parameters from SettingsRepository: angleThreshold, durationThreshold, cooldownSeconds, vibrationPattern
+- Logic: when angle > threshold for > duration consecutive seconds, and cooldown elapsed:
+  - Fire vibration
+  - Emit AlertEvent to alertFlow
+- VibrationEffect patterns:
+  - single: VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE)
+  - double_short: VibrationEffect.createWaveform(longArrayOf(0, 200, 200, 200), intArrayOf(0, 255, 0, 255), -1)
+  - long: VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE)
+  - pulse: VibrationEffect.createWaveform(longArrayOf(0, 100, 100, 100, 100, 100), intArrayOf(0, 255, 0, 255, 0, 255), -1)
+- alertFlow: SharedFlow<AlertEvent>
+
+## FILE 23: service/NeckMonitorService.kt
+- NeckMonitorService extending Service
+- onCreate: create notification, start foreground with notification ID 1
+- onStartCommand: START_STICKY
+- onBind: return null (not bound)
+- Contains reference to MonitorEngine
+- Lifecycle-aware: create a simple LifecycleRegistry owner
+- Companion: fun start(context: Context), fun stop(context: Context)
+
+## FILE 24: data/model/Entities.kt
+As specified in the schema above. @Entity for PostureRecord and AppSettings.
+
+## FILE 25: data/db/AppDatabase.kt
+```kotlin
+package com.neckangle.app.data.db
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import com.neckangle.app.data.model.AppSettings
+import com.neckangle.app.data.model.PostureRecord
+
+@Database(
+    entities = [PostureRecord::class, AppSettings::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun postureRecordDao(): PostureRecordDao
+    abstract fun settingsDao(): SettingsDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getInstance(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "neckangle.db"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+```
+
+## FILE 26: data/db/PostureRecordDao.kt
+Room DAO interface:
+- @Insert fun insert(record: PostureRecord)
+- @Query delete records by date range
+- @Query delete all
+- @Query Flow<List<PostureRecord>> for today
+- @Query Flow for aggregate stats (SUM, AVG, MAX)
+
+## FILE 27: data/db/SettingsDao.kt
+Room DAO interface:
+- @Insert(onConflict = REPLACE) fun insertOrUpdate(settings: AppSettings)
+- @Query Flow<AppSettings?> getSettings()
+- @Query to update individual fields
+
+## FILE 28: data/repository/StatsRepository.kt
+```kotlin
+package com.neckangle.app.data.repository
+
+import com.neckangle.app.data.db.AppDatabase
+import com.neckangle.app.data.db.PostureRecordDao
+import com.neckangle.app.data.model.PostureRecord
+import com.neckangle.app.ui.stats.DayStat
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.util.Calendar
+
+class StatsRepository(database: AppDatabase) {
+    private val dao = database.postureRecordDao()
+
+    fun getTodayStats(): Flow<Pair<Int, Float>> {
+        val todayStart = getDayStartMillis(0)
+        val todayEnd = getDayEndMillis(0)
+        return dao.getRecordsInRange(todayStart, todayEnd).map { records ->
+            if (records.isEmpty()) return@map Pair(0, 0f)
+            val badRecords = records.filter { it.isBadPosture }
+            val totalMinutes = badRecords.sumOf { it.durationSeconds } / 60
+            val avgAngle = if (records.isNotEmpty()) records.map { it.angle }.average().toFloat() else 0f
+            Pair(totalMinutes, avgAngle)
+        }
+    }
+
+    fun getWeeklyTrend(): Flow<List<DayStat>> {
+        val sevenDaysAgo = getDayStartMillis(-6)
+        val todayEnd = getDayEndMillis(0)
+        return dao.getRecordsInRange(sevenDaysAgo, todayEnd).map { records ->
+            (0..6).map { daysAgo ->
+                val start = getDayStartMillis(-daysAgo)
+                val end = getDayEndMillis(-daysAgo)
+                val dayRecords = records.filter { it.timestamp in start..end }
+                DayStat(
+                    dayLabel = when(daysAgo) {
+                        0 -> "今天"
+                        1 -> "昨天"
+                        else -> {
+                            val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -daysAgo) }
+                            "${cal.get(Calendar.MONTH) + 1}/${cal.get(Calendar.DAY_OF_MONTH)}"
+                        }
+                    },
+                    avgAngle = if (dayRecords.isNotEmpty()) dayRecords.map { it.angle }.average().toFloat() else 0f,
+                    totalMinutes = if (dayRecords.isNotEmpty()) dayRecords.filter { it.isBadPosture }.sumOf { it.durationSeconds } / 60 else 0
+                )
+            }.reversed()
+        }
+    }
+
+    suspend fun clearToday() {
+        val start = getDayStartMillis(0)
+        val end = getDayEndMillis(0)
+        dao.deleteInRange(start, end)
+    }
+
+    suspend fun clearAll() = dao.deleteAll()
+
+    private fun getDayStartMillis(daysAgo: Int): Long {
+        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, daysAgo) }
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    private fun getDayEndMillis(daysAgo: Int): Long {
+        return getDayStartMillis(daysAgo) + 24 * 60 * 60 * 1000 - 1
+    }
+}
+```
+
+## FILE 29: data/repository/SettingsRepository.kt
+```kotlin
+package com.neckangle.app.data.repository
+
+import com.neckangle.app.data.db.AppDatabase
+import com.neckangle.app.data.model.AppSettings
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class SettingsRepository(database: AppDatabase) {
+    private val dao = database.settingsDao()
+
+    val angleThreshold: Flow<Float> = dao.getSettings().map { it?.angleThreshold ?: 25f }
+    val durationThreshold: Flow<Int> = dao.getSettings().map { it?.durationThreshold ?: 15 }
+    val cooldownSeconds: Flow<Int> = dao.getSettings().map { it?.cooldownSeconds ?: 30 }
+    val vibrationPattern: Flow<String> = dao.getSettings().map { it?.vibrationPattern ?: "double_short" }
+    val frameRateMode: Flow<String> = dao.getSettings().map { it?.frameRateMode ?: "balanced" }
+
+    suspend fun updateAngleThreshold(value: Float) {
+        dao.insertOrUpdate(dao.getSettingsOnce()?.copy(angleThreshold = value) ?: AppSettings(angleThreshold = value))
+    }
+    suspend fun updateDurationThreshold(value: Int) {
+        dao.insertOrUpdate(dao.getSettingsOnce()?.copy(durationThreshold = value) ?: AppSettings(durationThreshold = value))
+    }
+    suspend fun updateCooldown(value: Int) {
+        dao.insertOrUpdate(dao.getSettingsOnce()?.copy(cooldownSeconds = value) ?: AppSettings(cooldownSeconds = value))
+    }
+    suspend fun updateVibrationPattern(value: String) {
+        dao.insertOrUpdate(dao.getSettingsOnce()?.copy(vibrationPattern = value) ?: AppSettings(vibrationPattern = value))
+    }
+    suspend fun updateFrameRateMode(value: String) {
+        dao.insertOrUpdate(dao.getSettingsOnce()?.copy(frameRateMode = value) ?: AppSettings(frameRateMode = value))
+    }
+}
+```
+
+## IMPORTANT RULES
+1. Write EVERY file to disk at the exact paths specified.
+2. Every file must be COMPLETE compilable Kotlin.
+3. All UI text in Chinese.
+4. No internet permission needed.
+5. Write all files, then stop. Do NOT run gradle or any build commands.

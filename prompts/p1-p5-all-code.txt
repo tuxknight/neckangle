@@ -1,0 +1,265 @@
+Write ALL Kotlin source files for the NeckAngle app at /home/pi/hermes-workspace/NeckAngle.
+
+This is an Android app that uses front camera + MediaPipe face landmarker to monitor neck forward-head posture in real-time, vibrates as alert when bad posture persists, and runs in background.
+
+## READ THE REFERENCE FILES FIRST
+Read CLAUDE.md and TASKS.md for full context.
+
+## WHAT TO WRITE
+
+Write ALL the Kotlin files listed below. Write them COMPLETE — no stubs, no TODOs, no "implement later". Every file must compile.
+
+### 1. NeckAngleApp.kt (Application class)
+- Initialize Room database singleton
+- Notification channel creation for foreground service ("neck_monitor")
+- Late-init database instance
+
+### 2. MainActivity.kt (entry point)
+- Single activity hosting Compose NavHost
+- Handle camera + notification permissions at first launch
+- Permission rationale dialog if denied, open system settings
+- Lock to portrait orientation
+- Set up NeckAngleTheme + NavHost content
+
+### 3. ui/theme/Color.kt
+```kotlin
+// Dark color scheme
+BackgroundDark = #0F0F1A
+SurfaceDark = #1A1A2E
+SurfaceCard = #1E1E32
+Primary = #00D4FF
+Secondary = #7B2FF7
+PrimaryVariant = #00D4FF -> #7B2FF7 gradient
+StatusGreen = #00E676
+StatusYellow = #FFD600
+StatusRed = #FF1744
+TextPrimary = #FFFFFF
+TextSecondary = #B0B0C0
+```
+
+### 4. ui/theme/Type.kt
+- Custom typography with JetBrains Mono for number display (font family reference: "monospace")
+- Large display size (80sp) for the angle number
+- Body styles for card text
+
+### 5. ui/theme/Theme.kt
+- NeckAngleTheme composable with dark-only color scheme
+- Apply dark status bar
+- Surface the colors and typography via Material3 wrappers
+
+### 6. ui/components/AngleGauge.kt
+- Arc gauge from 0° to maxAngle (default 60°)
+- 3 colored arc segments: green 0-15°, yellow 15-30°, red 30-60°
+- Needle pointing to current angle
+- Clean, minimal, Canvas-based drawing
+- Takes: currentAngle: Float, maxAngle: Float = 60f, modifier: Modifier
+
+### 7. ui/components/AngleDisplay.kt
+- Large monospace number showing angle, unit "°" beside it
+- Color matches status (green/yellow/red)
+- Scale-in animation on value change (animateFloatAsState)
+- Takes: angle: Float?, status: Status (enum: NORMAL, WARNING, DANGER)
+
+### 8. ui/components/StatusCard.kt
+- Rounded 24dp card (SurfaceCard background)
+- Icon + label + value arranged horizontally
+- Takes: icon: ImageVector, label: String, value: String, modifier: Modifier
+
+### 9. ui/components/PostureIndicator.kt
+- Shows current posture mode with icon + Chinese label
+- Standing → 站立, Lying → 平躺, Side → 侧卧, Unknown → 未知
+- Bad posture duration counter: "已低头 XX 秒"
+- Takes: postureMode: String, badPostureDuration: Int, isBadPosture: Boolean
+
+### 10. ui/monitor/MonitorScreen.kt
+- Main monitoring screen
+- Camera preview as small overlay in top-right (circular crop, 120dp, using AndroidView for PreviewView)
+- Center: AngleDisplay (large live angle number)
+- Below: arc AngleGauge
+- Below gauge: PostureIndicator
+- Below: large circular start/stop toggle button with play/pause icon
+- Face not detected state: show "--°" + "请将面部对准摄像头" after 3s of no face
+- Animations: angle number scale-transition, color changes smooth
+
+### 11. ui/monitor/MonitorViewModel.kt
+- Collects from MonitorEngine singleton
+- Exposes: angle, postureMode, isMonitoring, badPostureDuration, isFaceDetected
+- start() / stop() toggles monitoring (binds/unbinds camera + engine)
+- Uses viewModelScope
+
+### 12. ui/settings/SettingsScreen.kt
+- Grouped list style
+- Sections:
+  1. 提醒设置:
+     - 角度阈值: Slider (10-45°, step 1°, default 25) with value label
+     - 持续时长: Slider (5-120s, step 5s, default 15) with value label
+     - 冷却时间: Slider (10-120s, step 5s, default 30) with value label
+     - 震动模式: Segmented buttons (单次 / 两次短震 / 长震 / 脉冲)
+  2. 性能:
+     - 采集频率: Segmented buttons (省电 / 均衡 / 精准)
+  3. 数据:
+     - 清除今天数据 (button with confirmation dialog)
+     - 清除所有数据 (button with confirmation dialog)
+  4. 关于:
+     - 版本号 "v1.0"
+     - 隐私说明: "本应用所有数据均在本地处理，不会上传或保存您的面部图像"
+- Each change persists immediately via SettingsRepo
+
+### 13. ui/settings/SettingsViewModel.kt
+- Reads/writes SettingsRepo
+- Save triggers database update
+
+### 14. ui/stats/StatsScreen.kt
+- Date selector (prev/next buttons, "今天" label)
+- Three stat cards: 总低头时长 / 平均角度 / 最长连续
+- 7日趋势折线图 (Canvas-drawn, x=days, y=average angle)
+- Empty state: "开始监测后，这里将展示你的颈椎姿势数据"
+
+### 15. ui/stats/StatsViewModel.kt
+- Queries Room records table
+- Aggregates stats for today and past 7 days
+- Returns StatsUiState(totalBadMinutes, avgAngle, maxConsecutiveSeconds, dailyTrend: List<DayStat>)
+
+### 16. ui/navigation/NavGraph.kt
+- NavHost with 3 destinations: monitor, stats, settings
+- Bottom navigation bar with icons + labels
+- Center FAB for start/stop monitoring (works from any screen via shared state)
+
+### 17. engine/camera/CameraSource.kt
+- Wraps CameraX lifecycle camera provider
+- Creates PreviewView for preview + ImageAnalysis for frame processing
+- Configurable target resolution (480p for front camera)
+- Frame rate throttle: 15fps active mode, 3fps background mode
+- Frame data class: image (ByteArray via ImageProxy to ByteBuffer), rotation, timestamp
+- frameFlow: MutableSharedFlow<Frame> (replay=0, extraBufferCapacity=1)
+- start() / stop() / setFrameRateMode(mode)
+- Bind to lifecycle (LifecycleOwner)
+
+### 18. engine/facedetect/FaceDetector.kt
+- Wraps MediaPipe FaceLandmarker
+- Create from bundled model file (copy from assets or download from MediaPipe)
+- suspend fun detect(frame: Frame): FaceResult?
+- FaceResult: noseTip, leftEye, rightEye, mouthLeft, mouthRight (normalized 0-1 coordinates as Pair<Float,Float>)
+- Fallback: if model not available, return null and log warning
+- Handle no-face gracefully
+
+### 19. engine/angle/AngleCalculator.kt
+- Input: FaceResult + phone rotation vector
+- Algorithm: approximate head pitch from face landmark geometry
+  - If both eyes visible: pitch from eye-mouth vertical ratio
+  - If full profile: pitch from nose-ear offset
+  - If only partial face: use nose vertical position relative to face bounding box
+- Combined with phone IMU pitch → estimated head angle
+- Output: AngleResult(angleDeg: Float, confidence: Float)
+- confidence: 0.0-1.0 based on landmark visibility
+
+### 20. engine/angle/PostureClassifier.kt
+- Uses accelerometer to detect posture mode
+- Stand/sit: gravity z ~9.8, x/y ~0
+- Lying supine: gravity y ~9.8, z ~0
+- Lying side: gravity x ~9.8, others ~0
+- Smooth over 2-second window (running average)
+- postureMode: StateFlow<PostureMode> (STANDING, SITTING, LYING_SUPINE, LYING_SIDE, UNKNOWN)
+- start() / stop() for sensor listener
+
+### 21. engine/angle/MonitorEngine.kt
+- Singleton coordinator
+- Combines CameraSource + FaceDetector + AngleCalculator + IMU/PostureClassifier
+- monitorState: StateFlow<MonitorState>
+- MonitorState data class: angle, postureMode, isFaceDetected, badPostureDuration, isBadPosture
+- When face lost: keep last angle for 2s, then set angle to null
+- start() / stop()
+- Runs in coroutine scope, launches a loop that:
+  1. Takes frame from CameraSource.frameFlow
+  2. Calls FaceDetector.detect()
+  3. If face found: calls AngleCalculator
+  4. Updates monitorState
+  5. Throttles based on frame rate mode
+
+### 22. engine/alert/AlertEngine.kt
+- Subscribes to MonitorEngine.monitorState
+- When angle > threshold for > duration_threshold consecutive seconds:
+  - Fire alert if cooldown elapsed
+- Vibration patterns:
+  - single: 300ms
+  - double_short: 200ms, 200ms gap, 200ms
+  - long: 1000ms
+  - pulse: 100ms, 100ms gap (repeat 3x)
+- Uses Vibrator + VibrationEffect (API 26+)
+- alertFlow: SharedFlow<AlertEvent>
+- start() / stop() / updateConfig()
+
+### 23. service/NeckMonitorService.kt
+- Foreground service extending Service
+- Notification channel "neck_monitor" with importance=low
+- Notification shows: "NeckAngle 监控中" + current angle
+- Contains CameraX lifecycle (create a dummy LifecycleOwner for the service context)
+- Binds/unbinds MonitorEngine
+- When app goes to background: service continues, drop to 3fps
+- When app returns foreground: notify to restore 15fps
+- Companion bindIntent / start / stop utility methods
+
+### 24. data/model/Entities.kt
+```kotlin
+@Entity(tableName = "records")
+data class PostureRecord(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val timestamp: Long,
+    val angle: Float,
+    val postureMode: String,
+    val isBadPosture: Boolean,
+    val durationSeconds: Int
+)
+
+@Entity(tableName = "settings")
+data class AppSettings(
+    @PrimaryKey val id: Int = 1,
+    val angleThreshold: Float = 25f,
+    val durationThreshold: Int = 15,
+    val cooldownSeconds: Int = 30,
+    val vibrationPattern: String = "double_short",
+    val frameRateMode: String = "balanced"
+)
+```
+
+### 25. data/db/AppDatabase.kt
+- Room database with PostureRecord and AppSettings DAOs
+- Version 1
+- Singleton pattern in companion object
+
+### 26. data/db/PostureRecordDao.kt
+- Insert, delete by date range, delete all
+- Query: records for today, records for past N days, aggregate stats
+- Flow-based queries for reactive UI
+
+### 27. data/db/SettingsDao.kt
+- Get settings (with default if not exists)
+- Update individual fields (angle threshold, duration threshold, etc.)
+- Flow-based for reactive UI
+
+### 28. data/repository/StatsRepository.kt
+- Wraps PostureRecordDao
+- getTodayStats(): totalBadMinutes, avgAngle, maxConsecutive
+- getWeeklyTrend(): List<DayStat> for past 7 days
+- clearToday(), clearAll()
+
+### 29. data/repository/SettingsRepository.kt
+- Wraps SettingsDao
+- Settings as StateFlow for reactive UI
+- Update methods for each setting
+- Lazy init with defaults
+
+## IMPORTANT NOTES
+
+1. All UI text must be in Chinese (simplified) — labels, buttons, descriptions, dialog text
+2. Root package: com.neckangle.app
+3. Use Material3 components throughout
+4. Handle camera permission denial gracefully (show rationale, offer to open settings)
+5. Handle MediaPipe model not available (log warning, continue without face detection)
+6. App must NOT have internet permission in manifest — all processing is local
+7. Write COMPLETE compilable code. No TODOs, no "TODO: implement later", no stubs.
+8. For the camera preview in MonitorScreen, use AndroidView wrapping PreviewView
+9. For the Gradle wrapper, generate it: run `gradle wrapper --gradle-version 8.5` after writing build.gradle.kts if gradlew doesn't exist
+
+## VERIFICATION
+After writing all files, run `./gradlew assembleDebug` and fix any compilation errors until it succeeds.
