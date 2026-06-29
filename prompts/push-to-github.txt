@@ -1,0 +1,18 @@
+Push the NeckAngle project from /home/pi/hermes-workspace/NeckAngle to GitHub.
+
+The target repo is: https://github.com/tuxknight/neckangle.git
+
+Steps:
+1. cd /home/pi/hermes-workspace/NeckAngle
+2. The .git/config has the right remote. If not, set: git remote add origin https://github.com/tuxknight/neckangle.git
+3. The repo already has an initial README.md commit on main branch
+4. You need to push the local commits. The local branch is 'main'.
+5. If HTTPS push fails with SSL errors, try: git config --global http.sslVerify false
+6. If that doesn't work, try SSH: check ~/.ssh/id_ed25519.pub for the public key, and configure SSH push. Use GIT_SSH_COMMAND if needed.
+7. If SSH also doesn't work, use the GitHub API to push files as blobs (since the git push transport is broken on this RPi's git version)
+
+The goal is to get the code on GitHub so CI (GitHub Actions) can build the APK.
+
+DO NOT try to embed the GitHub token in the URL.
+
+After success, verify with: git status shows clean, and the repo at github.com/tuxknight/neckangle has all the files.

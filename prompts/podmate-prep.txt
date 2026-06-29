@@ -1,0 +1,81 @@
+Prepare the PodMate project at /home/pi/hermes-workspace/podmate for GitHub.
+
+## Tasks
+
+### 1. Change data storage paths
+The project currently stores data relative to the project directory (data/ inside the project dir). 
+Change it to use ~/.local/share/podmate/ instead.
+
+Files to patch:
+- **podmate/db.py** line 10: Change DB_DIR from project-relative to `os.path.expanduser("~/.local/share/podmate")`
+- **podmate/pipeline.py** line 22: Change DATA_DIR from project-relative to `os.path.expanduser("~/.local/share/podmate")`
+- **podmate/config.py** line 32: Change data_dir default from project-relative to `"~/.local/share/podmate"`
+
+### 2. Create .gitignore
+Create .gitignore at project root with:
+```
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Data (user directory)
+data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (user-specific)
+podmate.env
+*.toml
+```
+
+Wait, the config is ~/.config/podmate/config.toml not in the project, so it's fine. Just exclude:
+```
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+```
+
+### 3. Create GitHub repo
+Create a new **public** repo at `tuxknight/podmate` on GitHub.
+Description: "播客伴侣 — 英文播客自动转写、翻译、中文配音 CLI"
+
+### 4. Initialize git repo, add remote, commit and push
+
+Steps:
+1. cd /home/pi/hermes-workspace/podmate
+2. git init
+3. git checkout -b main
+4. Apply all file changes above
+5. git add -A && git commit -m "init: PodMate podcast CLI tool"
+6. git remote add origin https://github.com/tuxknight/podmate.git
+7. git push -u origin main
+
+If HTTPS push fails with SSL errors on this RPi, try:
+- git config --global http.sslVerify false
+- If that still fails, use SSH if configured, or use the GitHub API to create blobs/trees/commits
+
+Goal: all code is on GitHub at github.com/tuxknight/podmate with no sensitive data in the repo.
