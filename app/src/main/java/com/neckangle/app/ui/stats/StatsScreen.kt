@@ -163,16 +163,15 @@ private fun WeeklyTrendChart(
         dailyTrend.forEachIndexed { index, stat ->
             val x = padding + (index.toFloat() / (dailyTrend.size - 1).coerceAtLeast(1)) * chartWidth
             drawContext.canvas.nativeCanvas.drawText(
-                    stat.dayLabel,
-                    x - 16f,
-                    size.height - 4f,
-                    android.graphics.Paint().apply {
-                        color = android.graphics.Color.parseColor("#B0B0C0")
-                        textSize = 22f
-                        textAlign = android.graphics.Paint.Align.LEFT
-                    }
-                )
-            }
+                stat.dayLabel,
+                x - 16f,
+                size.height - 4f,
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.parseColor("#B0B0C0")
+                    textSize = 22f
+                    textAlign = android.graphics.Paint.Align.LEFT
+                }
+            )
         }
     }
 }
