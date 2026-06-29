@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Head -->
+    <path
+        android:fillColor="#00D4FF"
+        android:pathData="M54,30 m-7,0 a7,7 0,1,1 14,0 a7,7 0,1,1 -14,0"/>
+    <!-- Neck -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#00D4FF"
+        android:strokeWidth="3"
+        android:pathData="M50,38 L50,50 M58,38 L58,50"/>
+    <!-- Shoulders -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#00D4FF"
+        android:strokeWidth="3"
+        android:pathData="M38,50 Q54,54 70,50"/>
+    <!-- Forward head arc -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#7B2FF7"
+        android:strokeWidth="2.5"
+        android:pathData="M30,28 A26,26 0,0,1 50,30"/>
+</vector>
