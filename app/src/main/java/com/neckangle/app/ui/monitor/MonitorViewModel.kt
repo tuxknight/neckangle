@@ -1,5 +1,8 @@
 package com.neckangle.app.ui.monitor
 
+import android.content.Context
+import androidx.camera.view.PreviewView
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neckangle.app.engine.angle.MonitorEngine
@@ -36,9 +39,13 @@ class MonitorViewModel : ViewModel() {
         .map { it.isBadPosture }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    fun toggleMonitoring() {
+    fun toggleMonitoring(
+        context: Context,
+        lifecycleOwner: LifecycleOwner,
+        previewView: PreviewView
+    ) {
         viewModelScope.launch {
-            if (engine.isRunning) engine.stop() else engine.start()
+            if (engine.isRunning) engine.stop() else engine.start(context, lifecycleOwner, previewView)
         }
     }
 }

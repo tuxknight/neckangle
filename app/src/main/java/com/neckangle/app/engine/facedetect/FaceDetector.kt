@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker.FaceLandmarkerOptions
@@ -69,7 +70,7 @@ class FaceDetector(private val context: Context) {
 
                 val baseOptions = BaseOptions.builder()
                     .setModelAssetPath("face_landmarker.task")
-                    .setDelegate(BaseOptions.Delegate.CPU)
+                    .setDelegate(Delegate.CPU)
                     .build()
 
                 val options = FaceLandmarkerOptions.builder()

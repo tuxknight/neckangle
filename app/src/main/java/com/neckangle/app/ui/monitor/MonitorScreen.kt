@@ -23,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +50,19 @@ fun MonitorScreen(
     val badPostureDuration by viewModel.badPostureDuration.collectAsState()
     val isFaceDetected by viewModel.isFaceDetected.collectAsState()
     val isBadPosture by viewModel.isBadPosture.collectAsState()
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val previewView = remember {
+        PreviewView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            scaleType = PreviewView.ScaleType.FILL_START
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
 
     val animatedAngle by animateFloatAsState(
         targetValue = angle ?: 0f,
@@ -85,7 +101,7 @@ fun MonitorScreen(
             Spacer(modifier = Modifier.weight(0.3f))
 
             FloatingActionButton(
-                onClick = { viewModel.toggleMonitoring() },
+                onClick = { viewModel.toggleMonitoring(context, lifecycleOwner, previewView) },
                 modifier = Modifier
                     .size(120.dp)
                     .padding(bottom = 16.dp),
@@ -102,25 +118,14 @@ fun MonitorScreen(
             Spacer(modifier = Modifier.weight(0.3f))
         }
 
-        if (isMonitoring) {
-            AndroidView(
-                factory = { ctx ->
-                    PreviewView(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        scaleType = PreviewView.ScaleType.FILL_START
-                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-16).dp, y = 48.dp)
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(SurfaceCard)
-            )
-        }
+        AndroidView(
+            factory = { previewView },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-16).dp, y = 48.dp)
+                .size(if (isMonitoring) 120.dp else 0.dp)
+                .clip(CircleShape)
+                .background(SurfaceCard)
+        )
     }
 }

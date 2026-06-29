@@ -1,0 +1,18 @@
+Fix 4 Kotlin compilation errors in NeckAngle Android app:
+
+1. **FaceDetector.kt:72** — `Unresolved reference: Delegate`
+   - Line uses something like `val x by Delegate(...)` that doesn't exist
+   - Read the file and fix the delegate reference (likely should use `lazy`, `Observable`, or a custom delegate class)
+
+2. **MonitorViewModel.kt:41** — `No value passed for parameter 'context', 'lifecycleOwner', 'previewView'`
+   - A function call at line 41 is missing 3 required parameters
+   - Read the file, find the function call, and either add the params or use a default
+
+3. **StatsScreen.kt:165** — `Unresolved reference: nativeCanvas`
+   - `nativeCanvas` is a Compose Canvas drawing API from an older version
+   - Replace with the correct modern Compose Canvas API (use `DrawScope` directly)
+
+Fix all 3 files. After fixing, verify:
+  cd ~/hermes-workspace/NeckAngle && gradle assembleDebug 2>&1 | tail -20
+
+Do NOT commit or push.

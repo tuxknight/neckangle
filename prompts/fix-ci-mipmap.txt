@@ -1,0 +1,29 @@
+Fix the NeckAngle Android app CI build. The current GitHub Actions build fails with:
+
+ERROR: AAPT: error: resource mipmap/ic_launcher (aka com.neckangle.app:mipmap/ic_launcher) not found.
+
+Root cause: The project was scaffolded with AndroidManifest.xml referencing @mipmap/ic_launcher but no mipmap resource directories or PNG files were created.
+
+Fix:
+1. Create the required mipmap directories and ic_launcher resources under app/src/main/res/
+2. Generate a simple ic_launcher.xml adaptive icon (vector drawable) OR create minimal PNG placeholders
+3. Also create ic_launcher_round.xml if needed
+
+Use adaptive icon approach (Prefer vector/XML to PNG):
+- Create app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml (adaptive icon)
+- Create app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+- Create app/src/main/res/drawable/ic_launcher_background.xml (solid color background)
+- Create app/src/main/res/drawable/ic_launcher_foreground.xml (simple neck/body icon outline)
+- For pre-v26 devices, create a simple colored PNG in mipmap-hdpi/, mipmap-mdpi/, mipmap-xhdpi/, mipmap-xxhdpi/, mipmap-xxxhdpi/
+
+The app's accent colors from Color.kt are:
+- Dark background: #0F0F1A → #1A1A2E (gradient)
+- Accent cyan: #00D4FF
+- Accent purple: #7B2FF7
+
+Use a dark background (#1A1A2E) with the cyan (#00D4FF) accent for the icon.
+
+After creating the resources, verify:
+  cd ~/hermes-workspace/NeckAngle && gradle assembleDebug 2>&1 | tail -20
+
+Do NOT commit or push anything. Just create the files and verify the build.

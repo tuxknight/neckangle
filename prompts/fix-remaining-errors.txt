@@ -1,0 +1,9 @@
+Fix the remaining build errors in NeckAngle project. Read the files first, then fix:
+
+1. Read ~/hermes-workspace/NeckAngle/app/src/main/java/com/neckangle/app/engine/facedetect/FaceDetector.kt — fix the "Unresolved reference: Delegate" at line 72
+
+2. Check that ~/hermes-workspace/NeckAngle/app/src/main/java/com/neckangle/app/ui/monitor/MonitorViewModel.kt compiles — the "No value passed for parameter" issue
+
+3. Check that ~/hermes-workspace/NeckAngle/app/src/main/java/com/neckangle/app/ui/stats/StatsScreen.kt compiles — the "nativeCanvas" issue
+
+Fix all issues found. DO NOT commit or push.
